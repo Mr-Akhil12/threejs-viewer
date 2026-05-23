@@ -44,9 +44,6 @@
         let scene, camera, renderer, controls, mixer;
         const clock = new THREE.Clock();
 
-        init();
-        animate();
-
         async function init() {
             // Scene
             scene = new THREE.Scene();
@@ -64,18 +61,25 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // Load HDRI environment
-            const pmremGenerator = new PMREMGenerator(renderer);
-            pmremGenerator.compileEquirectangularShader();
+            // Try to load HDRI environment, fallback to solid color
+            let envMapPMREM = null;
+            try {
+                const pmremGenerator = new PMREMGenerator(renderer);
+                pmremGenerator.compileEquirectangularShader();
 
-            const rgbeLoader = new RGBELoader();
-            const hdrUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/textures/equirectangular/venice_sunset_1k.hdr';
-            const envMap = await rgbeLoader.setPath( '').loadAsync(hdrUrl);
-            const envMapPMREM = pmremGenerator.fromEquirectangular(envMap).texture;
-            envMap.dispose();
+                const rgbeLoader = new RGBELoader();
+                const hdrUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/textures/equirectangular/venice_sunset_1k.hdr';
+                const envMap = await rgbeLoader.setPath('').loadAsync(hdrUrl);
+                envMapPMREM = pmremGenerator.fromEquirectangular(envMap).texture;
+                envMap.dispose();
 
-            scene.environment = envMapPMREM;
-            scene.background = envMapPMREM; // Use HDRI as background
+                scene.environment = envMapPMREM;
+                scene.background = envMapPMREM; // Use HDRI as background
+            } catch (e) {
+                console.warn('Failed to load HDRI, falling back to solid background:', e);
+                scene.background = new THREE.Color(0x000000);
+                scene.environment = null;
+            }
 
             // Ground
             const groundGeometry = new THREE.PlaneGeometry(20, 20);
@@ -180,6 +184,18 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        // Start
+        (async () => {
+            try {
+                await init();
+                animate();
+            } catch (err) {
+                console.error('Init failed:', err);
+                document.getElementById('loader').textContent = 'Error loading model';
+                document.getElementById('info').textContent = 'See console for details';
+            }
+        })();
     </script>
 </body>
 </html>
