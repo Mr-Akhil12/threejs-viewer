@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Our Model Viewer</title>
+    <title>Our Model Viewer - Debug</title>
     <style>body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;}#info{position:absolute;top:10px;left:10px;font-size:14px;}</style>
 </head>
 <body>
@@ -39,6 +39,14 @@ ground.rotation.x = -Math.PI/2;
 ground.receiveShadow = true;
 scene.add(ground);
 
+// Add a test cube to see if rendering works
+const testCube = new THREE.Mesh(
+    new THREE.BoxGeometry(1,1,1),
+    new THREE.MeshStandardMaterial({color: 0xff0000})
+);
+testCube.position.set(0,0.5,0);
+scene.add(testCube);
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
@@ -56,7 +64,7 @@ loader.load(
             if (c.isMesh) { 
                 c.castShadow = true; 
                 c.receiveShadow = true; 
-                console.log('Mesh:', c.name, c.material);
+                console.log('Mesh:', c.name || 'unnamed', c.material);
             } 
         });
         scene.add(model);
@@ -67,10 +75,19 @@ loader.load(
         const size = box.getSize(new THREE.Vector3());
         console.log('Box center:', center, 'size:', size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const offset = new THREE.Vector3(0, maxDim*0.5, maxDim*0.75);
-        camera.position.copy(center).add(offset);
-        camera.lookAt(center);
-        controls.target.copy(center);
+        console.log('maxDim:', maxDim);
+        if (maxDim > 0) {
+            const offset = new THREE.Vector3(0, maxDim*0.5, maxDim*0.75);
+            camera.position.copy(center).add(offset);
+            camera.lookAt(center);
+            controls.target.copy(center);
+            controls.minDistance = maxDim * 0.5;
+            controls.maxDistance = maxDim * 3;
+        } else {
+            // fallback
+            camera.position.set(0,1,3);
+            controls.target.set(0,0,0);
+        }
         document.getElementById('info').textContent = 'Our model loaded. Drag to orbit.';
     },
     (xhr) => {
